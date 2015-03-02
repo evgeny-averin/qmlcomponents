@@ -15,13 +15,13 @@
 #include <QOrientationFilter>
 #include <chrono>
 #include "convenience.h"
-#include "runnable.h"
 #include "physics.h"
 
 #ifdef Q_OS_ANDROID
 #include <QtAndroid>
 #include <QAndroidJniObject>
 #include <QAndroidJniEnvironment>
+#include "runnable.h"
 #endif
 
 class Application: public QObject
@@ -71,7 +71,7 @@ public:
         _view.engine()->rootContext()->setContextProperty("world", World::instance());
         _view.engine()->setOfflineStoragePath(mediaPath() + "dictionaries.db");
         _view.setResizeMode(QQuickView::SizeRootObjectToView);
-        _view.setSource(QUrl(QStringLiteral("qrc:///main.qml")));
+        _view.setSource(QUrl(QStringLiteral("qrc:////main.qml")));
         _view.show();
 
         _speech_pull_timer.setInterval(500);
@@ -95,7 +95,7 @@ public:
         QResource::unregisterResource("/sdcard/Develop/main.rcc");
         QResource::registerResource("/sdcard/Develop/main.rcc");
         _view.engine()->clearComponentCache();
-        _view.setSource(QUrl(QStringLiteral("qrc:///main.qml")));
+        _view.setSource(QUrl(QStringLiteral("qrc:////main.qml")));
         qDebug() << "Resources reloaded sucessfully";
     }
 
@@ -141,6 +141,7 @@ public:
         _view.engine()->trimComponentCache();
     }
 
+#ifdef Q_OS_ANDROID
     Q_SLOT void showAdvertizing()
     {
         QAndroidJniObject::callStaticMethod<void>("org/qtproject/example/admobqt/AdMobQtActivity", "showAd");
@@ -168,6 +169,7 @@ public:
         connect(speech_feedback, SIGNAL(resultPulled(QString)), this, SLOT(setSpeechResult(QString)));
         runner->start(speech_feedback);
     }
+#endif
 
     Q_SLOT QString formatDate(const QDateTime &dt, const QString &fmt)
     {

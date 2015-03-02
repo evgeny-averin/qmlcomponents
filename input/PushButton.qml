@@ -1,6 +1,6 @@
 import QtQuick 2.0
 
-import "../utils.js" as Utils
+import "../common/utils.js" as Utils
 
 Item {
     id: root

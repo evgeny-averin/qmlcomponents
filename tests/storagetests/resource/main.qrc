@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>tst_main.qml</file>
+        <file>../../../storage/Storage.qml</file>
+    </qresource>
+</RCC>
