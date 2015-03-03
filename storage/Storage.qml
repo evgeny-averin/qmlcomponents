@@ -1,7 +1,8 @@
 import QtQuick 2.3
 import QtQuick.LocalStorage 2.0
 
-Item {
+Item
+{
     id: storage
     property string database
     property string version: "1.0"
@@ -127,7 +128,11 @@ Item {
                 }
 
                 tx.executeSql("DROP TABLE IF EXISTS " + table_name);
-                tx.executeSql(query);
+
+                if (entries.length > 0)
+                {
+                    tx.executeSql(query);
+                }
 
                 for (i = 0; i < entries.length; ++i)
                 {
