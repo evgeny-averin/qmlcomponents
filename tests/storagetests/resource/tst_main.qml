@@ -2,11 +2,8 @@ import QtQuick 2.2
 import QtTest 1.1
 import "../../../storage"
 
-Rectangle
+Item
 {
-    id: mainWindow
-    color: "green"
-
     Storage
     {
         id: storage

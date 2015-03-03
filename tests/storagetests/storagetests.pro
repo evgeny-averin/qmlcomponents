@@ -20,6 +20,7 @@ HEADERS += ../../src/application.h \
 
 RESOURCES += ./resource/main.qrc
 
-OTHER_FILES += resource/main.qml \
-               prebuild.sh
-
+OTHER_FILES +=  ./resource/tst_main.qml \
+                ./resource/tst_sqltablemodel.qml \
+                ../../../qmlcomponents/storage/SqlTableModel.qml \
+                ../../../qmlcomponents/storage/Storage.qml \
