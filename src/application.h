@@ -47,7 +47,7 @@ public:
         , _name(name)
     {
 #ifdef DEVELOPER_BUILD
-        _watcher.addPath("resource.lck");
+        _watcher.addPath("/sdcard/Develop/flag/resource.lck");
         _watcher.addPath("/sdcard/Develop/flag/");
 
         connect(&_watcher, SIGNAL(fileChanged(const QString &)),      this, SLOT(reloadResources()));
@@ -78,7 +78,11 @@ public:
 
         connect(this, SIGNAL(screenWidthChanged (qreal)), this, SLOT(onScreenWidthChanged (qreal)));
         connect(this, SIGNAL(screenHeightChanged(qreal)), this, SLOT(onScreenHeightChanged(qreal)));
+
+
+#ifdef Q_OS_ANDROID
         connect(&_speech_pull_timer,  SIGNAL(timeout()),  this, SLOT(pullRecognitionResult()));
+#endif
     }
 
     int exec()
