@@ -130,7 +130,8 @@ Item
                    "Failed to clear table");
 
             var rows = storage.readTable("testTable");
-            verify(rows.length === 0, "Table is not empty as it is expected.");
+            verify(rows.length === 0,
+                   "Table is not empty as it is expected.");
         }
     }
 }

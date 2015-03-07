@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>../../../common/AutoText.qml</file>
+        <file>../../../common/utils.js</file>
+        <file>../../../common/WaitingIcon.qml</file>
+        <file>../../../views/PersistentListView.qml</file>
+        <file>../../../views/PersistentListViewItem.qml</file>
+        <file>../../../storage/SqlTableModel.qml</file>
+	<file>../../../storage/Storage.qml</file>
+    </qresource>
+</RCC>
