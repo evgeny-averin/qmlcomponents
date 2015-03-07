@@ -9,6 +9,8 @@ Item
     property alias internalModel: model
     property string table
 
+    signal loadingFinished();
+
 /**
  *  API functions
  *
@@ -140,7 +142,7 @@ Item
             var rows = storage.readTable(sqlTableModel.table);
             model.clear();
 
-            for (var i in rows)
+            for (var i = 0; i < rows.length; ++i)
             {
                 var row = rows[i];
                 model.append(row);
@@ -148,5 +150,11 @@ Item
 
             return true;
         }
+    }
+
+    Component.onCompleted:
+    {
+        internal.reload();
+        sqlTableModel.loadingFinished();
     }
 }
