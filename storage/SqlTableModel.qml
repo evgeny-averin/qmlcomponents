@@ -45,6 +45,30 @@ Item
         saveTimer.start();
     }
 
+    function swap(index1, index2)
+    {
+        if (index1 === index2)
+        {
+            return;
+        }
+
+        model.move(index1, index2, 1);
+
+        if (Math.abs(index1 - index2) != 1)
+        {
+            if (index2 < index1)
+            {
+                model.move(index2 + 1, index1, 1);
+            }
+            else
+            {
+                model.move(index2 - 1, index1, 1);
+            }
+        }
+
+        saveTimer.start();
+    }
+
     function remove(index, count)
     {
         model.remove(index, count);
@@ -100,10 +124,6 @@ Item
         id: model
 
         dynamicRoles: true
-        onDataChanged:
-        {
-            internal.save();
-        }
     }
 
 /**
