@@ -6,7 +6,7 @@ prebuild.depends = FORCE
 QMAKE_EXTRA_TARGETS += prebuild
 PRE_TARGETDEPS += phony
 
-QT += widgets quick sensors
+QT += widgets quick sensors androidextras
 CONFIG += ignore_no_exist
 
 QMAKE_CXXFLAGS += -std=c++1y -DDEVELOPER_BUILD

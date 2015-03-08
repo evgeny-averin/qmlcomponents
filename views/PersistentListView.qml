@@ -129,7 +129,7 @@ ListView
         {
             id: persistentListViewItem
 
-            height: 40
+            height: 60 * mainWindow.scale
             width: persistentListView.width
 
             anchors
@@ -186,17 +186,19 @@ ListView
             {
                 right: parent.right
                 verticalCenter: parent.verticalCenter
-                rightMargin: height / 2
+                rightMargin: 0
             }
 
-            height: 20
+            height: parent.height
             width: height
             drag.target: persistentListViewItem
             drag.axis: Drag.YAxis
 
             Rectangle
             {
-                anchors.fill: parent
+                anchors.centerIn: parent
+                width: 20 * mainWindow.scale
+                height: width
                 color: "gray"
                 opacity: 1
                 radius: height / 2
