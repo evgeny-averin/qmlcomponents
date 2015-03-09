@@ -28,82 +28,49 @@ ListView
   */
     function append(jsobject)
     {
-        internal.verify(jsobject);
-        storage.append(jsobject);
+        persistence.append(jsobject);
     }
 
     function insert(jsobject, index)
     {
-        internal.verify(jsobject);
-        storage.insert(jsobject, index);
+        persistence.insert(jsobject, index);
     }
 
     function remove(index)
     {
-        internal.verifyIndex("remove()", index);
-        storage.remove(index, 1);
+        persistence.remove(index);
     }
 
     function get(index)
     {
-        internal.verifyIndex("get()", index);
-        storage.get(index);
+        return persistence.get(index);
     }
 
     function set(jsobject, index)
     {
-        internal.verify(jsobject);
-        internal.verifyIndex("set()", index);
-        storage.set(index, jsobject);
+        persistence.set(jsobject, index);
     }
 
     function clear()
     {
-        storage.clear();
+        persistence.clear();
     }
 
 /**
   *     Internal structure - place all private data here.
   *
   */
-    Item
+
+    Persistence
     {
-        id: internal
-
-        function verify(jsobject)
+        id: persistence
+        storage: SqlTableModel
         {
-            if (roles.length != Object.keys(jsobject).length)
+            id: storage
+            onLoadingFinished:
             {
-                throw "PersistentListView.internal::verify(): Object properties" +
-                        " length invalid (must be = " + roles.length + ")";
+                persistentListView.loadingFinished();
             }
-
-            for (var i = 0; i < roles.length; ++i)
-            {
-                if (!jsobject.hasOwnProperty(roles[i]))
-                {
-                    throw "PersistentListView.internal::verify(): Object " +
-                            "missing property " + roles[i];
-                }
-            }
-        }
-
-        function verifyIndex(scope, index)
-        {
-            if (index >= count)
-            {
-                throw "PersistentListView::" + scope + ": Invalid index ("
-                        + index + ")"
-            }
-        }
-    }
-
-    SqlTableModel
-    {
-        id: storage
-        onLoadingFinished:
-        {
-            persistentListView.loadingFinished();
         }
     }
 
