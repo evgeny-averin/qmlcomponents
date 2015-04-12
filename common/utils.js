@@ -28,3 +28,18 @@ function to_rad(val)
 {
     return val / 180. * Math.PI;
 }
+
+function clamp(val, from, to)
+{
+    if (val < from)
+    {
+        return from;
+    }
+
+    if (val > to)
+    {
+        return to;
+    }
+
+    return val;
+}

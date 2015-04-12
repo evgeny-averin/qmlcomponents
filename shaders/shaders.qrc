@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/qmlcomponents/shaders">
+        <file>noisy.vsh</file>
+        <file>noisy.fsh</file>
+        <file>line.vsh</file>
+        <file>line.fsh</file>
+    </qresource>
+</RCC>
