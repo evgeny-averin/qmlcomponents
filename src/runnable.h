@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef Q_OS_ANDROID
+
 #include <QRunnable>
 #include <QAndroidJniEnvironment>
 #include <QAndroidJniObject>
@@ -176,3 +178,5 @@ inline void QtAndroidRunner::start(QRunnable * runnable)
     QAndroidJniEnvironment env;
     env->CallStaticVoidMethod(d->clazz,d->tick);
 }
+
+#endif
