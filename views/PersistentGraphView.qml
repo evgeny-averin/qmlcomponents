@@ -195,8 +195,8 @@ Item
         property var graphs: []
         property int bottomMargin: 100 * mainWindow.scale
         property int topMargin:    100 * mainWindow.scale
-        property int leftMargin:   50 * mainWindow.scale
-        property int rightMargin:  0 * mainWindow.scale
+        property int leftMargin:    50 * mainWindow.scale
+        property int rightMargin:    0 * mainWindow.scale
 
         readonly property int widthMinusMargins:
             persistentGraphView.width - (leftMargin + rightMargin)
@@ -314,7 +314,7 @@ Item
                             y0 + h * (1. - (y - viewport.bottom) / viewport.height));
         }
 
-        function from_screen(x, y)
+        function fromScreen(x, y)
         {
             x -= workspace.leftMargin;
             y -= workspace.topMargin
@@ -323,7 +323,7 @@ Item
                             viewport.bottom + viewport.height * (1. - y / persistentGraphView.height))
         }
 
-        function dx_from_screen(dx)
+        function dxFromScreen(dx)
         {
             return dx * viewport.width / persistentGraphView.width;
         }
@@ -374,12 +374,11 @@ Item
     {
         id: navigation
 
-        property real x0
-        property real zoomCenterX
+        property real centerX
         property real zoomDistance0
         property int numPressed: 0
 
-        property var state: Graph.Idle
+        property int state: Graph.Idle
         readonly property int pixelThreshold: 30 * mainWindow.scale
 
         anchors.fill: parent
@@ -394,9 +393,30 @@ Item
             return  Math.sqrt(diff.x * diff.x + diff.y * diff.y);
         }
 
+        function gravityCenter()
+        {
+            var sum = 0;
+            var count = 0;
+            if (point1.pressed)
+            {
+                sum += point1.x;
+                ++count;
+            }
+            if (point2.pressed)
+            {
+                sum += point2.x;
+                ++count;
+            }
+            if (count == 0)
+            {
+                return 0;
+            }
+            return sum / count;
+        }
+
         onPressed:
         {
-            x0 = touchPoints[0].x;
+            centerX = gravityCenter();
             ++numPressed;
 
             if (state === Graph.Idle)
@@ -413,10 +433,9 @@ Item
                 if (numPressed == 2)
                 {
                     state = Graph.Zoom;
-                    var t0 = workspace.from_screen(point1.x, 0).x;
-                    var t1 = workspace.from_screen(point2.x, 0).x;
+                    var t0 = workspace.fromScreen(point1.x, 0).x;
+                    var t1 = workspace.fromScreen(point2.x, 0).x;
 
-                    zoomCenterX = (t0 + t1) * .5;
                     zoomDistance0 = distance(point1, point2);
                 }
             }
@@ -444,7 +463,8 @@ Item
             else if (numPressed == 1 &&
                      state === Graph.Zoom)
             {
-                state = Graph.ZoomFinished;
+                state = Graph.Pan;
+                centerX = gravityCenter();
             }
         }
 
@@ -452,7 +472,7 @@ Item
         {
             if (state === Graph.ReadyToPan)
             {
-                var dx = x0 - touchPoints[0].x;
+                var dx = centerX - gravityCenter();
                 if (Math.abs(dx) > pixelThreshold)
                 {
                     state = Graph.Pan;
@@ -461,26 +481,32 @@ Item
 
             if (state === Graph.Pan)
             {
-                dx = x0 - touchPoints[0].x;
-                viewport.move(workspace.dx_from_screen(dx));
+                dx = centerX - gravityCenter();
+                viewport.move(workspace.dxFromScreen(dx));
 
-                x0 = touchPoints[0].x;
+                centerX = gravityCenter();
             }
             else if (state === Graph.Zoom)
             {
                 var dst = distance(point1, point2);
                 var zoom = zoomDistance0 / dst;
+                var centerXMsec = workspace.fromScreen(centerX, 0).x;
 
-                var d0 = (zoomCenterX - viewport.left) * zoom;
-                var d1 = (viewport.right - zoomCenterX) * zoom;
+                var d0 = (centerXMsec -  viewport.left) * zoom;
+                var d1 = (viewport.right - centerXMsec) * zoom;
 
-                var l = zoomCenterX - d0;
-                var r = zoomCenterX + d1;
+                var x = (point1.x + point2.x) * .5;
+                dx = centerX - x;
+                centerXMsec += workspace.dxFromScreen(dx);
+
+                var l = centerXMsec - d0;
+                var r = centerXMsec + d1;
 
                 viewport.moveTo((l + r) * .5);
                 viewport.width *= zoom;
 
                 zoomDistance0 = dst;
+                centerX = x;
             }
         }
     }
