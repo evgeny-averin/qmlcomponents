@@ -1,7 +1,7 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.2
 import QtQuick.Controls.Styles 1.1
-import "../utils.js" as Utils
+import "../common/utils.js" as Utils
 
 Item {
     id: root
@@ -82,6 +82,28 @@ Item {
             text: root.placeholderText
             color: "#bbbbbb"
             visible: !parent.focus
+        }
+    }
+
+    MouseArea
+    {
+        anchors
+        {
+            right: parent.right
+            top: parent.top
+            bottom: parent.bottom
+        }
+        width: height
+
+        onClicked:
+        {
+            textField.text = "";
+        }
+
+        Text
+        {
+            anchors.centerIn: parent
+            text: "X"
         }
     }
 }

@@ -1,58 +1,70 @@
 import QtQuick 2.0
 
+import "../../qmlcomponents/common"
 import "../common/utils.js" as Utils
+import "qrc:/../../qmlcomponents/common"
 
 Item {
-    id: root
+    id: pushButton
 
-    property alias image: image.source
+    property alias image: image
     property alias text:  txtTitle.text
     property alias font:  txtTitle.font
     property alias color: txtTitle.color
     property int   horizontalAlignment: Text.AlignVCenter
-    property int   touchMargins: root.width * 0.1
+    property int   touchMargins: pushButton.width * 0.1
     property Component  background: null
 
     signal pressed();
     signal released();
     signal clicked();
 
-    width:  txtTitle.width  + 10 * mainWindow.scale
-    height: txtTitle.height * 1.8
+    width:   txtTitle.width  + 10 * mainWindow.scale
+    height:  txtTitle.height * 1.8
+    enabled: opacity > 0
 
     antialiasing: true
     color: mouseArea.pressed ? "#222" : "transparent"
 
-    Behavior on opacity { NumberAnimation{} }
+    Behavior on opacity { NumberAnimation {duration: 150; easing.type: Easing.InOutQuad} }
 
     Component.onCompleted: {
-        switch (root.horizontalAlignment) {
+        switch (pushButton.horizontalAlignment) {
             case Text.AlignVCenter: {
-                txtTitle.anchors.centerIn = root;
+                txtTitle.anchors.centerIn = pushButton;
                 break;
             }
             case Text.AlignLeft: {
-                txtTitle.anchors.left = root.left;
-                txtTitle.anchors.verticalCenter = root.verticalCenter;
+                txtTitle.anchors.left = pushButton.left;
+                txtTitle.anchors.verticalCenter = pushButton.verticalCenter;
                 break;
             }
             case Text.AlignRight: {
-                txtTitle.anchors.right = root.right;
-                txtTitle.anchors.verticalCenter = root.verticalCenter;
+                txtTitle.anchors.right = pushButton.right;
+                txtTitle.anchors.verticalCenter = pushButton.verticalCenter;
                 break;
             }
         }
     }
 
+    TapAnimation
+    {
+        id: tapAnimation
+        anchors.centerIn: parent
+        tapEffectWidth:   parent.width
+    }
+
+    onClicked: tapAnimation.tap()
+
     Loader {
         anchors.fill: parent
-        sourceComponent: root.background
+        sourceComponent: pushButton.background
     }
 
     Image {
         id: image
         anchors.fill: parent
-        scale: root.background ? 0.7 : 1
+        scale: pushButton.background ? 0.7 : 1
     }
 
     MouseArea {
@@ -64,15 +76,15 @@ Item {
         }
 
         onPressed: {
-            root.pressed();
+            pushButton.pressed();
         }
 
         onReleased: {
-            root.released();
+            pushButton.released();
         }
 
         onClicked: {
-            root.clicked();
+            pushButton.clicked();
         }
     }
 
