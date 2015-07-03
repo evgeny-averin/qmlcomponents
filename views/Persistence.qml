@@ -46,7 +46,7 @@ Item
     function get(index)
     {
         internal.verifyIndex("get()", index);
-        storage.get(index);
+        return storage.get(index);
     }
 
     function set(jsobject, index)
@@ -74,7 +74,8 @@ Item
             if (roles.length != Object.keys(jsobject).length)
             {
                 throw "Persistence::verify(): Object properties" +
-                        " length invalid (must be = " + roles.length + ")";
+                        " length (" + Object.keys(jsobject).length + ") is invalid (must be = "
+                        + roles.length + ")";
             }
 
             for (var i = 0; i < roles.length; ++i)
@@ -89,7 +90,7 @@ Item
 
         function verifyIndex(scope, index)
         {
-            if (index >= count)
+            if (index >= storage.count)
             {
                 throw "Persistence::" + scope + ": Invalid index ("
                         + index + ")"

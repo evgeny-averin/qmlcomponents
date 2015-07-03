@@ -3,6 +3,7 @@ import QtQuick.Controls 1.2
 import QtQuick.Controls.Styles 1.1
 import QtSensors 5.0
 import "../storage"
+import "../common"
 
 ListView
 {
@@ -12,9 +13,15 @@ ListView
   *     API properties
   *
   */
-    property var roles: []
+    property alias roles: persistence.roles
     property alias database: storage.database
     property alias table: storage.table
+    property alias verticalScrollbar: verticalScrollbar
+    property Component itemDelegate
+    property bool itemsDraggable: false
+
+    maximumFlickVelocity: 5000
+    flickDeceleration: 4000
 
 /**
   *     API signals
@@ -29,6 +36,41 @@ ListView
     function append(jsobject)
     {
         persistence.append(jsobject);
+    }
+
+    function appendSorted(jsobject)
+    {
+        if (section.property.length == 0)
+        {
+            persistence.append(jsobject);
+        }
+        else
+        {
+            var found = false;
+
+            for (var i = 0; i < count; ++i)
+            {
+                var ch0 = jsobject[section.property][0];
+                var ch1 =   get(i)[section.property][0];
+
+                if (ch0 < ch1)
+                {
+                    break;
+                }
+
+                if (!found)
+                {
+                    if (ch0 === ch1) { found = true; }
+                }
+                else if (ch0 !== ch1)
+                {
+                    break;
+                }
+            }
+
+            console.log("insert", i);
+            persistence.insert(jsobject, i);
+        }
     }
 
     function insert(jsobject, index)
@@ -88,16 +130,18 @@ ListView
 
         property int visualIndex: index
 
-        width: persistentListView.width
+        width:  persistentListViewItem.width
         height: persistentListViewItem.height
-        clip: true
 
         PersistentListViewItem
         {
             id: persistentListViewItem
 
-            height: 60 * mainWindow.scale
-            width: persistentListView.width
+            property int modelIndex: index
+
+            height: loader.item.height
+            width:  loader.item.width
+            interactive: persistentListView.interactive
 
             anchors
             {
@@ -109,10 +153,24 @@ ListView
                 storage.remove(index, 1);
             }
 
-            Text
+            Loader
             {
-                anchors.centerIn: parent
-                text: role1
+                id: loader
+                sourceComponent: itemDelegate
+                onLoaded:
+                {
+                    item.setData(index, delegateRoot,
+                        persistentListView.model.get(index));
+                }
+            }
+
+            onModelIndexChanged:
+            {
+                if (loader.item)
+                {
+                    loader.item.setData(index, delegateRoot,
+                        persistentListView.model.get(index));
+                }
             }
 
             Drag.active: dragArea.drag.active
@@ -149,6 +207,8 @@ ListView
         MouseArea
         {
             id: dragArea
+            enabled: itemsDraggable
+
             anchors
             {
                 right: parent.right
@@ -163,6 +223,7 @@ ListView
 
             Rectangle
             {
+                visible: itemsDraggable
                 anchors.centerIn: parent
                 width: 20 * mainWindow.scale
                 height: width
@@ -175,6 +236,7 @@ ListView
         DropArea
         {
             anchors { fill: parent; margins: 15 }
+            enabled: itemsDraggable
             onEntered:
             {
                 storage.move(drag.source.visualIndex, delegateRoot.visualIndex, 1);
@@ -182,6 +244,10 @@ ListView
         }
     }
 
+    VerticalScrollBar
+    {
+        id: verticalScrollbar
+    }
 
 /**
   *     States

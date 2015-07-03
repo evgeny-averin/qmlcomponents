@@ -45,18 +45,28 @@ Item
 
     readonly property alias range: range
     readonly property alias viewport: viewport
+    property alias grid: grid
     property string database
     property string table
     property string name
     property Component background
-    property color foregroundColor: "white"
-    clip: true
+    property color textColor: "white"
+    property bool interactive: true
+    property int totalCount: 0
+
+    onTableChanged:
+    {
+        internalStorage.table = table;
+        refresh();
+    }
 
 /**
  *     API signals
  *
  */
+    signal dataChanged()
     signal loadingFinished()
+    signal loadingFailed()
 
 /**
  *     API functions
@@ -91,7 +101,13 @@ Item
 
     function clear()
     {
+        workspace.foreachGraph(function (graph)
+        {
+            graph.clear();
+        });
+
         persistence.clear();
+        totalCount = 0;
     }
 
 /**
@@ -120,8 +136,6 @@ Item
                 graph.anchors.fill = persistentGraphView;
                 graph.anchors.bottomMargin = Qt.binding(
                     function () { return workspace.bottomMargin; });
-                graph.anchors.topMargin = Qt.binding(
-                    function () { return workspace.topMargin; });
 
                 roles.push(graph.role);
                 workspace.graphs.push(graph);
@@ -164,6 +178,18 @@ Item
         storage: SqlTableModel
         {
             id: internalStorage
+
+            onDataChanged:
+            {
+                workspace.fitToScreen();
+                persistentGraphView.dataChanged();
+            }
+
+            onLoadingFailed:
+            {
+                persistentGraphView.loadingFailed();
+            }
+
             onLoadingFinished:
             {
                 workspace.fitToScreen();
@@ -193,10 +219,9 @@ Item
     {
         id: workspace
         property var graphs: []
-        property int bottomMargin: 100 * mainWindow.scale
-        property int topMargin:    100 * mainWindow.scale
-        property int leftMargin:    50 * mainWindow.scale
-        property int rightMargin:    0 * mainWindow.scale
+        property int bottomMargin: 50 * mainWindow.scale
+        property int leftMargin:   50 * mainWindow.scale
+        property int rightMargin:   0 * mainWindow.scale
 
         readonly property int widthMinusMargins:
             persistentGraphView.width - (leftMargin + rightMargin)
@@ -205,15 +230,11 @@ Item
         anchors.leftMargin: leftMargin
         clip: true
 
-        onLeftMarginChanged:
-        {
-            fitToScreen();
-        }
+        onLeftMarginChanged:   { fitToScreen(); }
+        onBottomMarginChanged: { fitToScreen(); }
+        onRightMarginChanged:  { fitToScreen(); }
 
-/**
- *     Some functions for convenient iteration
- *
- */
+        // Some functions for convenient iteration
 
         function foreachGraph(proc)
         {
@@ -239,10 +260,8 @@ Item
             }
         }
 
-/**
- *     Graph-specific functions
- *
- */
+        // Graph-specific functions
+
         function fitToScreen()
         {
             var left = 0;
@@ -262,8 +281,18 @@ Item
                 var jsobject = internalStorage.get(0);
                 left = jsobject.x;
                 right = jsobject.x;
-                bottom = 0;
-                top = 0;
+
+                if (graphs.length > 0)
+                {
+                    bottom = jsobject[graphs[0].role];
+                    top    = jsobject[graphs[0].role];
+                }
+
+                for (var j = 1; j < graphs.length; ++j)
+                {
+                    bottom = Math.min(bottom, jsobject[graphs[j].role]);
+                    top    = Math.max(top,    jsobject[graphs[j].role]);
+                }
             }
 
             for (var i = 0; i < internalStorage.count; ++i)
@@ -272,7 +301,7 @@ Item
                 left   = Math.min(left,   jsobject.x);
                 right  = Math.max(right,  jsobject.x);
 
-                for (var j = 0; j < graphs.length; ++j)
+                for (j = 0; j < graphs.length; ++j)
                 {
                     bottom = Math.min(bottom, jsobject[graphs[j].role]);
                     top    = Math.max(top,    jsobject[graphs[j].role]);
@@ -284,7 +313,7 @@ Item
                        (right - left),
                        (top - bottom));
 
-            var s = horizontalGrid.step();
+            var s = horizontalGrid.step(top - bottom);
 
             bottom = bottom - bottom % s;
             top = top - top % s + s;
@@ -300,24 +329,20 @@ Item
             updateGrid();
         }
 
-/**
- *      Coordinate conversion
- *
- */
+        // Coordinate conversion
+
         function to_screen(x, y)
         {
-            var y0 = workspace.bottomMargin;
-            var w = persistentGraphView.width;
-            var h = persistentGraphView.height - footer.height - header.height;
+            var w = workspace.width;
+            var h = workspace.height - workspace.bottomMargin;
 
             return Qt.point(w * (x - viewport.left) / viewport.width,
-                            y0 + h * (1. - (y - viewport.bottom) / viewport.height));
+                            h * (1. - (y - viewport.bottom) / viewport.height));
         }
 
         function fromScreen(x, y)
         {
             x -= workspace.leftMargin;
-            y -= workspace.topMargin
 
             return Qt.point(viewport.left   + viewport.width  * (x / persistentGraphView.width),
                             viewport.bottom + viewport.height * (1. - y / persistentGraphView.height))
@@ -325,13 +350,11 @@ Item
 
         function dxFromScreen(dx)
         {
-            return dx * viewport.width / persistentGraphView.width;
+            return dx * viewport.width / workspace.width;
         }
 
-/**
- *      Update functions
- *
- */
+        // Update functions
+
         function updateGrid()
         {
             horizontalGrid.update();
@@ -340,6 +363,8 @@ Item
 
         function updateBuffer()
         {
+            var count = 0;
+
             workspace.foreachGraph(function (graph)
             {
                 var vertices = [];
@@ -348,12 +373,14 @@ Item
 
                 workspace.foreachRow(function (row)
                 {
-                    var u = viewport.normalizeX(row.x);
                     var v = viewport.normalizeY(row[graph.role]);
-
-                    graph.push_back(row.x - range.left, v);
+                    graph.push_back(row.x - range.left, 1. - v);
                 });
+
+                count += graph.count;
             });
+
+            persistentGraphView.totalCount = count;
         }
 
         function updateViewport()
@@ -362,14 +389,14 @@ Item
             {
                 graph.setLeft(viewport.left - range.left);
                 graph.setRight(viewport.right - range.left);
+                graph.setBottom(range.bottom);
+                graph.setTop(range.top);
             });
         }
     }
 
-/**
- *      Navigation item
- *
- */
+    // Navigation item
+
     MultiPointTouchArea
     {
         id: navigation
@@ -381,6 +408,7 @@ Item
         property int state: Graph.Idle
         readonly property int pixelThreshold: 30 * mainWindow.scale
 
+        enabled: persistentGraphView.interactive
         anchors.fill: parent
         touchPoints: [
             TouchPoint { id: point1 },
@@ -511,111 +539,83 @@ Item
         }
     }
 
-/**
- *      Header and footer
- *
- */
-    Item
+    Item // Graph header
     {
         id: header
 
-        anchors {
-            left: parent.left
-            right: parent.right
-            top: parent.top
-        }
-        height: workspace.topMargin
-
-        Column
+        anchors
         {
-            anchors {
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                rightMargin: workspace.rightMargin
-            }
-
-            Rectangle
-            {
-                width: parent.width
-                height: 1
-                color: Qt.lighter(persistentGraphView.foregroundColor, 6)
-            }
-
-            Rectangle
-            {
-                width: parent.width
-                height: 1
-                color: persistentGraphView.foregroundColor
-            }
-
-            Rectangle
-            {
-                width: parent.width
-                height: 1
-                color: Qt.lighter(persistentGraphView.foregroundColor, 8)
-            }
-        }
-
-
-
-        Text
-        {
-            anchors.centerIn: parent
-            text: persistentGraphView.name
-            color: persistentGraphView.foregroundColor
-            font.pixelSize: header.height / 3
-        }
-    }
-
-    Item
-    {
-        id: footer
-
-        anchors {
-            left: parent.left
+            left:  parent.left
             right: parent.right
-            bottom: parent.bottom
+            top:   parent.top
+            topMargin: 10 * mainWindow.scale
         }
-        height: workspace.bottomMargin
+        height: 60 * mainWindow.scale
 
-/**
- *      Graph legend
- *
- */
-        ListView
+        Rectangle
+        {
+            anchors.fill: legend
+            anchors.margins: -header.anchors.topMargin / 2
+            border.color: Qt.darker(color)
+            opacity: 0.5
+            visible: legend.visible
+        }
+
+        Row // Graph legend
         {
             id: legend
 
-            anchors.centerIn: parent
-            width: childrenRect.width
-            orientation: ListView.Horizontal
             spacing: 30 * mainWindow.scale
+            anchors.right: parent.right
+            anchors.rightMargin: header.anchors.topMargin
 
-            delegate: Row
+            property alias model: legendRepeater.model
+            Repeater
             {
-                spacing: 10 * mainWindow.scale
-                Rectangle
+                id: legendRepeater
+                anchors.centerIn: parent
+                delegate: Row
                 {
-                    id: rect
-                    width: footer.height / 4
-                    height: width
-                    color: Qt.rgba(
-                               modelData.color.r,
-                               modelData.color.g,
-                               modelData.color.b,
-                               0.4);
-                    border.color: modelData.color
-                    opacity: 0.8
-                }
+                    spacing: 10 * mainWindow.scale
+                    Rectangle
+                    {
+                        id: rect
+                        width: header.height / 4
+                        height: width
+                        anchors.verticalCenter: parent.verticalCenter
 
-                Text
-                {
-                    anchors.verticalCenter: rect.verticalCenter
-                    text: modelData.name
-                    color: persistentGraphView.foregroundColor
-                    font.pixelSize: footer.height / 4
+                        color: Qt.rgba(modelData.color.r,
+                                       modelData.color.g,
+                                       modelData.color.b, 0.4);
+                        border.color: modelData.color
+                        opacity: 0.8
+                    }
+
+                    Text
+                    {
+                        anchors.verticalCenter: rect.verticalCenter
+                        text: modelData.name
+
+                        style: Text.Outline
+                        color: persistentGraphView.textColor
+                        styleColor: Qt.lighter(color, 2.5)
+
+                        font.pixelSize: 18 * mainWindow.scale
+                    }
                 }
+            }
+        } // ListView {id: legend}
+
+        Row
+        {
+            anchors.verticalCenter: header.verticalCenter
+            x: 10 * mainWindow.scale
+            spacing: 10 * mainWindow.scale
+            Text
+            {
+                anchors.verticalCenter: parent.verticalCenter
+                text:  persistentGraphView.name
+                color: persistentGraphView.textColor
             }
         }
     }
@@ -641,7 +641,7 @@ Item
                 width: persistentGraphView.width - workspace.leftMargin
                 x: workspace.leftMargin
                 y: model_y
-                color: persistentGraphView.foregroundColor
+                color: persistentGraphView.textColor
 
                 Rectangle
                 {
@@ -669,7 +669,7 @@ Item
                     anchors.rightMargin: 5 * mainWindow.scale
                     anchors.verticalCenter: parent.verticalCenter
                     font.pixelSize: 15 * mainWindow.scale
-                    color: persistentGraphView.foregroundColor
+                    color: persistentGraphView.textColor
                     text: model_text
 
                 }
@@ -680,30 +680,53 @@ Item
                 id: horizontalGridModel
             }
 
-            function step()
+            function step(h)
             {
                 var steps = [
+                    .1,
+                    .2,
+                    .5,
                     1,
                     2,
                     5,
                     10,
-                    15,
-                    25,
+                    20,
                     50,
                     100,
-                    150,
                     200,
                     500,
-                    750,
                     1000,
-                    1500,
-                    2000
+                    2000,
+                    5000,
+                    10000,
+                    20000,
+                    50000,
+                    100000,
+                    200000,
+                    500000,
+                    1000000,
+                    2000000,
+                    5000000,
+                    10000000,
+                    20000000,
+                    50000000,
+                    100000000,
+                    200000000,
+                    500000000,
+                    1000000000,
+                    2000000000,
+                    5000000000,
+                    10000000000,
+                    20000000000,
+                    50000000000,
+                    100000000000,
+                    200000000000,
+                    500000000000
                 ];
 
-                var h = viewport.top - viewport.bottom;
-                for(var i in steps)
+                for (var i in steps)
                 {
-                    if(steps[i] * 4 > h)
+                    if(steps[i] * 5 > h)
                     {
                         break;
                     }
@@ -714,25 +737,42 @@ Item
 
             function update()
             {
-                var s = step();
+                if (!viewport.isValid())
+                {
+                    return;
+                }
+
+                var s = step(viewport.height);
                 var h = viewport.top - viewport.bottom;
                 var y = viewport.bottom - viewport.bottom % s;
                 var text_size = Math.floor(15 * mainWindow.scale)
                 var points = [];
+                var Threshold = 50 * mainWindow.scale;
 
-                while(y < h)
+                if (h / s > 100)
                 {
-                    var p = workspace.to_screen(0, y);
-                    var point = {model_y: p.y, model_text: "" + y};
+                    console.error("Failed to update horizontal grid. " +
+                                  "Could not select appropriate step.")
+                    return;
+                }
 
-                    if (y <= persistentGraphView.height - workspace.bottomMargin)
+                var i = 0;
+                while (y + i * s < viewport.top - viewport.height * .3)
+                {
+                    var yClamped = Math.max(y + i * s, viewport.bottom);
+
+                    var p = workspace.to_screen(0, yClamped);
+                    var point = {model_y: p.y, model_text: Utils.humanReadable(yClamped)};
+
+                    if (points.length == 0 ||
+                        Math.abs(p.y - points[points.length - 1].model_y) > Threshold)
                     {
                         points.push(point);
                     }
-                    y += s;
+                    ++i;
                 }
 
-                for (var i = 0; i < Math.min(horizontalGridModel.count, points.length); ++i)
+                for (i = 0; i < Math.min(horizontalGridModel.count, points.length); ++i)
                 {
                     horizontalGridModel.set(i, points[i]);
                 }
@@ -791,7 +831,7 @@ Item
                     anchors.bottomMargin: workspace.bottomMargin - height - verticalGrid.tickHeight
                     anchors.horizontalCenter: parent.horizontalCenter
                     font.pixelSize: 15 * mainWindow.scale
-                    color: persistentGraphView.foregroundColor
+                    color: persistentGraphView.textColor
                     text: model_text
 
                 }
@@ -804,7 +844,7 @@ Item
 
             function daysInMonth(month, year)
             {
-                var d= new Date(year, month + 1, 0);
+                var d = new Date(year, month + 1, 0);
                 return d.getDate();
             }
 
@@ -841,7 +881,7 @@ Item
                 var date = new Date(viewport.left - leftLocal % s.value);
                 var x = date.getTime();
 
-                while (x < viewport.right)
+                while (x < viewport.right + viewport.width * 0.2)
                 {
                     var format = isStartOfTheDay(date) ? "dd MMM" : s.format;
 
@@ -953,12 +993,16 @@ Item
 
             function buildYearScale()
             {
-                console.log("year")
-
+                return [];
             }
 
             function update()
             {
+                if (!viewport.isValid())
+                {
+                    return;
+                }
+
                 var ticks = [];
                 var ticksInModel = [];
                 var day = 1000 * 60 * 60 * 24;
@@ -967,11 +1011,11 @@ Item
                 {
                     ticks = buildHourScale();
                 }
-                else if (viewport.width < 30 * day)
+                else if (viewport.width < 60 * day)
                 {
                     ticks = buildDayScale();
                 }
-                else if (viewport.width < 365 * day)
+                else if (viewport.width < 2 * 365 * day)
                 {
                     ticks = buildMonthScale();
                 }
@@ -1053,4 +1097,20 @@ Item
             }
         }
     }
+
+    states:
+    [
+        State
+        {
+            when: totalCount == 0
+            PropertyChanges {target: legend; visible: false}
+            PropertyChanges {target: grid;   visible: false}
+        },
+        State
+        {
+            when: totalCount > 0
+            PropertyChanges {target: legend; visible: true}
+            PropertyChanges {target: grid;   visible: true}
+        }
+    ]
 }

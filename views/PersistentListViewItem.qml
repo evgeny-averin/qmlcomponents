@@ -1,29 +1,22 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.1
 
-Rectangle
+Item
 {
     id: persistentListViewItem
 
-    border.color: "gray"
-
     property alias interactive: mouseArea.enabled
+    property bool deletable: false
 
-/**
-  *     Signals for external usage
-  *
-  */
+    // Signals for external usage
     signal deleted();
     signal clicked();
     signal pressAndHold();
     signal dragStarted();
     signal dragFinished();
 
-/**
-  *     MouseArea used for processing
-  *     drag and press events
-  *
-  */
+    // MouseArea used for processing
+    // drag and press events
     MouseArea
     {
         id: mouseArea
@@ -42,37 +35,37 @@ Rectangle
         property int xSaved
         drag
         {
-            target: persistentListViewItem
+            target: deletable ? persistentListViewItem: null
             axis: Drag.XAxis
             maximumX: 0
             threshold: 30 * mainWindow.scale
 
             onActiveChanged:
             {
-                if(drag.active)
+                if (deletable)
                 {
-                    persistentListViewItem.dragStarted();
-                    xSaved = persistentListViewItem.x;
-                }
-                else if(xSaved - persistentListViewItem.x < 100 * mainWindow.scale)
-                {
-                    persistentListViewItem.x = xSaved;
-                    persistentListViewItem.dragFinished();
-                }
-                else
-                {
-                    persistentListViewItem.dragFinished();
-                    persistentListViewItem.state = "aboutTobeDestroyed";
+                    if(drag.active)
+                    {
+                        persistentListViewItem.dragStarted();
+                        xSaved = persistentListViewItem.x;
+                    }
+                    else if(xSaved - persistentListViewItem.x < 100 * mainWindow.scale)
+                    {
+                        persistentListViewItem.x = xSaved;
+                        persistentListViewItem.dragFinished();
+                    }
+                    else
+                    {
+                        persistentListViewItem.dragFinished();
+                        persistentListViewItem.state = "aboutTobeDestroyed";
+                    }
                 }
             }
         }
     }
 
-/**
-  *     States for animation when
-  *     created, destroyed and etc.
-  *
-  */
+    // States for animation when
+    // created, destroyed and etc.
     states: [
         State
         {
