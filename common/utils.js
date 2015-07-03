@@ -43,3 +43,34 @@ function clamp(val, from, to)
 
     return val;
 }
+
+function humanReadable(val)
+{
+    var suffix = "";
+
+    if (val > 999999)
+    {
+        val *= 1e-6;
+        suffix = "M";
+    }
+    else if (val > 999)
+    {
+        val *= 1e-3;
+        suffix = "k";
+    }
+
+    var str = "" + val;
+    var parts = str.split(".");
+
+    var result = parts[0];
+    if (parts.length > 1 && parts[1].length > 1)
+    {
+        result += "." + parts[1][0];
+    }
+    else if (parts.length > 1)
+    {
+        result += "." + parts[1];
+    }
+
+    return result + suffix;
+}

@@ -85,5 +85,12 @@ QtObject {
         return "left: " + range.left + " right: " + range.right +
                " top: " +  range.top + " bottom: " + range.bottom;
     }
+
+    function isValid()
+    {
+        return (width > 0) && (height > 0) &&
+                !isNaN(width) && !isNaN(height) &&
+                isFinite(width) && isFinite(height)
+    }
 }
 
