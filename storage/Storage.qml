@@ -62,7 +62,7 @@ Item
     {
         try
         {
-            var result = [];
+            var result = {length: 0};
             internal.database().transaction(function (tx)
             {
                 var rs = tx.executeSql("SELECT * FROM " + table_name);
@@ -73,8 +73,8 @@ Item
         catch (err)
         {
             console.log("Storage::readTable:", err);
-            return [];
         }
+        return false;
     }
 
     function updateTable(table_name, entries)

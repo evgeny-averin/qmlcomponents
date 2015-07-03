@@ -10,22 +10,20 @@ Item
     property string table
 
     signal loadingFinished();
+    signal loadingFailed();
+    signal dataChanged();
 
-/**
- *  API functions
- *
- */
-
+    // API functions
     function append(jsobject)
     {
         model.append(jsobject);
-        saveTimer.start();
+        saveTimer.restart();
     }
 
     function clear()
     {
         model.clear();
-        saveTimer.start();
+        saveTimer.restart();
     }
 
     function get(index)
@@ -35,14 +33,14 @@ Item
 
     function insert(jsobject, index)
     {
-        model.insert(jsobject, index);
-        saveTimer.start();
+        model.insert(index, jsobject);
+        saveTimer.restart();
     }
 
     function move(from, to, count)
     {
         model.move(from, to, count);
-        saveTimer.start();
+        saveTimer.restart();
     }
 
     function swap(index1, index2)
@@ -66,19 +64,19 @@ Item
             }
         }
 
-        saveTimer.start();
+        saveTimer.restart();
     }
 
     function remove(index, count)
     {
         model.remove(index, count);
-        saveTimer.start();
+        saveTimer.restart();
     }
 
     function set(index, jsobject)
     {
         model.set(index, jsobject);
-        saveTimer.start();
+        saveTimer.restart();
     }
 
     function save()
@@ -101,22 +99,13 @@ Item
     {
         id: saveTimer
 
-        interval: 10
+        interval: 1000
         repeat: false
         onTriggered:
         {
             internal.save();
+            sqlTableModel.loadingFinished();
         }
-    }
-
-    onDatabaseChanged:
-    {
-        internal.reload();
-    }
-
-    onTableChanged:
-    {
-        internal.reload();
     }
 
     ListModel
@@ -124,6 +113,11 @@ Item
         id: model
 
         dynamicRoles: true
+    }
+
+    onTableChanged:
+    {
+        internal.reload();
     }
 
 /**
@@ -134,10 +128,58 @@ Item
     {
         id: internal
 
+        property var sourceRows: {length: 0}
+        property var destinationRows: []
+        property int lastProcessed: 0
+
+        Timer
+        {
+            id: reloadTimer
+
+            interval: 1
+            repeat: true
+            onTriggered:
+            {
+                var from = 0;
+                var to = internal.sourceRows.length - 1;
+
+                for (var i = from; i <= to; ++i)
+                {
+                    var obj = {};
+                    for (var key in internal.sourceRows.item(i))
+                    {
+                        obj[key] = internal.sourceRows.item(i)[key];
+                    }
+                    internal.destinationRows.push(obj);
+                }
+
+                internal.lastProcessed = to + 1;
+                if (to === internal.sourceRows.length - 1)
+                {
+                    stop();
+
+                    backgroundLoader.sendMessage({
+                        model: model,
+                        rows: internal.destinationRows});
+                }
+            }
+        }
+
+        WorkerScript
+        {
+            id: backgroundLoader
+            source: "backgroundLoader.js"
+
+            onMessage:
+            {
+                sqlTableModel.loadingFinished();
+            }
+        }
+
         function save()
         {
             if (sqlTableModel.database.length == 0 ||
-                    sqlTableModel.table.length == 0)
+                sqlTableModel.table.length == 0)
             {
                 return false;
             }
@@ -154,18 +196,29 @@ Item
         function reload()
         {
             if (sqlTableModel.database.length == 0 ||
-                    sqlTableModel.table.length == 0)
+                sqlTableModel.table.length == 0)
             {
                 return false;
             }
 
-            var rows = storage.readTable(sqlTableModel.table);
-            model.clear();
+            sourceRows = storage.readTable(sqlTableModel.table);
 
-            for (var i = 0; i < rows.length; ++i)
+            if (sourceRows === false)
             {
-                var row = rows[i];
-                model.append(row);
+                sqlTableModel.loadingFailed();
+                return false;
+            }
+
+            destinationRows = [];
+            lastProcessed = 0;
+
+            if (sourceRows.length > 0)
+            {
+                reloadTimer.start();
+            }
+            else
+            {
+                sqlTableModel.loadingFinished();
             }
 
             return true;
@@ -175,6 +228,5 @@ Item
     Component.onCompleted:
     {
         internal.reload();
-        sqlTableModel.loadingFinished();
     }
 }
