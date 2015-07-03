@@ -40,6 +40,7 @@ Graph::push_back(qreal x, qreal y)
 {
     m_samples.push_back({x, y});
     m_samplesChanged = true;
+    setCount(m_samples.size());
     update();
 }
 
@@ -49,6 +50,7 @@ Graph::pop_front()
 {
     m_samples.removeFirst();
     m_samplesChanged = true;
+    setCount(m_samples.size());
     update();
 }
 
@@ -57,6 +59,7 @@ Graph::clear()
 {
     m_samples.clear();
     m_samplesChanged = true;
+    setCount(m_samples.size());
     update();
 }
 

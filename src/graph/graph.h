@@ -64,6 +64,8 @@ public:
     Q_PROPERTY_DEF(qreal, bottom, bottom, setBottom, 0.)
     Q_PROPERTY_DEF(qreal, top,    top,    setTop,    0.)
 
+    Q_PROPERTY_DEF(int, count, count, setCount, 0)
+
     Q_PROPERTY_DEF(Step,  step,  step,  setStep,  Step::StepSimple)
     Q_PROPERTY_DEF(qreal, shadowOpacity, shadowOpacity, setShadowOpacity, 0.1)
 

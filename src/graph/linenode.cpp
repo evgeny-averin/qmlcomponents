@@ -155,6 +155,11 @@ LineNode::LineNode(const QColor &color)
 void LineNode::updateGeometry(const QRectF &bounds,
                               const QList<QPointF> &samples, LineStyle style)
 {
+    if (samples.size() == 0)
+    {
+        return;
+    }
+
     switch(style)
     {
     case LineStyle::Simple:
@@ -203,6 +208,11 @@ void
 ShadowNode::updateGeometry(const QRectF &bounds,
                            const QList<QPointF> &samples, LineStyle style)
 {
+    if (samples.size() == 0)
+    {
+        return;
+    }
+
     m_geometry.setDrawingMode(style == LineStyle::Bars ?
                                   GL_TRIANGLES : GL_TRIANGLE_STRIP);
 

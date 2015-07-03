@@ -53,10 +53,27 @@ public:
         connect(&_watcher, SIGNAL(fileChanged(const QString &)),      this, SLOT(reloadResources()));
         connect(&_watcher, SIGNAL(directoryChanged(const QString &)), this, SLOT(reloadResources()));
 
-        if(!QResource::registerResource("/sdcard/Develop/main.rcc")) {
+        if(!QResource::registerResource("/sdcard/Develop/main.rcc"))
+        {
             qDebug() << "Failed to load main.rcc";
         }
 #endif
+        // Install translator with system locale
+        auto translator = new QTranslator(this);
+
+        QString path = QString(":/translations/stock-browser-%1.qm").
+                arg(QLocale::system().name());
+
+        if (translator->load(path))
+        {
+            QApplication::installTranslator(translator);
+            qDebug() << "Loaded translation file from " << path;
+        }
+        else
+        {
+            qWarning() << "Failed to load translation file from " << path;
+        }
+
         _view.setSurfaceType(QSurface::OpenGLSurface);
 
         QSurfaceFormat format;
@@ -74,10 +91,13 @@ public:
         _view.setSource(QUrl(QStringLiteral("qrc:////main.qml")));
         _view.show();
 
+        _view.installEventFilter(this);
+
         _speech_pull_timer.setInterval(500);
 
         connect(this, SIGNAL(screenWidthChanged (qreal)), this, SLOT(onScreenWidthChanged (qreal)));
         connect(this, SIGNAL(screenHeightChanged(qreal)), this, SLOT(onScreenHeightChanged(qreal)));
+        connect(_view.engine(), SIGNAL(quit()), this, SIGNAL(quit()));
 
 
 #ifdef Q_OS_ANDROID
@@ -180,8 +200,31 @@ public:
         return dt.toString(fmt);
     }
 
+    Q_SLOT void quit()
+    {
+        QAndroidJniObject::callStaticMethod<void>("org/qtproject/eaverin/stock/browser/AdMobQtActivity", "quit");
+    }
+
+    bool eventFilter(QObject *obj, QEvent *event) override
+    {
+        if (event->type() == QEvent::KeyPress)
+        {
+            auto keyEvent = static_cast<QKeyEvent *>(event);
+
+            if (keyEvent->key() == Qt::Key_Backspace)
+            {
+                emit backspacePressed();
+                return true;
+            }
+        }
+
+        return QObject::eventFilter(obj, event);
+    }
+
+
     Q_SIGNAL void worldChanged();
     Q_SIGNAL void mediaPathChanged();
+    Q_SIGNAL void backspacePressed();
 
 private:
 
